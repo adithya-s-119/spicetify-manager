@@ -1,0 +1,91 @@
+# Spicetify Manager
+
+A small Windows GUI for [spicetify](https://spicetify.app) — apply your theme, rebuild the backup, and update the CLI without remembering commands.
+
+![Spicetify Manager](docs/screenshot.png)
+
+## Features
+
+- **Apply Theme** — runs `spicetify apply` against your existing backup.
+- **Rebuild Backup** — runs `spicetify backup apply` on a fresh install, or `spicetify restore backup apply` (with a confirmation prompt) when a backup already exists.
+- **Update Spicetify** — runs `spicetify update`.
+- Live, colour-coded command output with ANSI codes stripped; **Stop**, **Copy** and **Clear**.
+- Detects the installed version, the spicetify location, and whether a backup exists.
+- Single self-contained executable: no installer, no config files, no runtime files next to it.
+
+## Requirements
+
+- Windows 10 or 11 (the .NET Framework 4.x runtime is included with Windows).
+- [spicetify](https://spicetify.app) installed. It is found via `PATH`, `%LOCALAPPDATA%\spicetify` or `%APPDATA%\spicetify`.
+- Spotify installed, as required by spicetify.
+
+## Download and run
+
+1. Download `SpicetifyGui.exe` from this repository.
+2. Double-click it.
+
+The executable is standalone — you can move it anywhere and delete every other file. You can also pass spicetify arguments to run them on launch:
+
+```powershell
+.\SpicetifyGui.exe update
+.\SpicetifyGui.exe --version
+```
+
+## Why "Rebuild Backup" instead of "Backup"?
+
+`spicetify backup` creates exactly one backup and refuses to overwrite it. Once a backup exists, theme changes only need `spicetify apply`. To start over you must restore Spotify's original files first:
+
+```
+spicetify restore backup apply
+```
+
+That restores the stock files, captures a fresh backup, and re-applies your setup. The GUI asks for confirmation before running it.
+
+## Console launcher
+
+`SpicetifyApply.exe` is a minimal console alternative. It runs `spicetify backup apply` by default and passes arguments through:
+
+```powershell
+.\SpicetifyApply.exe              # spicetify backup apply
+.\SpicetifyApply.exe apply        # spicetify apply
+.\SpicetifyApply.exe --version --no-pause
+```
+
+`--no-pause` skips the final "press any key" prompt, which is useful in scripts.
+
+## Build from source
+
+Both programs are plain C# compiled with the C# compiler that ships with the .NET Framework. From the repository root:
+
+```powershell
+.\build.ps1
+```
+
+Or manually:
+
+```powershell
+$csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+
+& $csc /nologo /target:winexe /platform:anycpu /optimize+ /win32icon:SpicetifyGui.ico `
+  /out:SpicetifyGui.exe `
+  /r:System.dll /r:System.Core.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll `
+  SpicetifyGui.cs
+
+& $csc /nologo /target:exe /platform:anycpu /optimize+ /win32icon:SpicetifyGui.ico `
+  /out:SpicetifyApply.exe SpicetifyApply.cs
+```
+
+## Repository layout
+
+| File | Purpose |
+| --- | --- |
+| `SpicetifyGui.exe` | The GUI application (prebuilt). |
+| `SpicetifyGui.cs` | WinForms source for the GUI. |
+| `SpicetifyGui.ico` | Application icon. |
+| `SpicetifyApply.exe` | Console launcher (prebuilt). |
+| `SpicetifyApply.cs` | Console launcher source. |
+| `build.ps1` | Rebuilds both executables. |
+
+## Disclaimer
+
+Unofficial tool. Not affiliated with spicetify or Spotify.
