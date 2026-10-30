@@ -2,14 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A small Windows GUI for [spicetify](https://spicetify.app) — apply your theme, rebuild the backup, and update the CLI without remembering commands.
+A small Windows GUI for [spicetify](https://spicetify.app) — back up and apply your setup, rebuild the backup, and update the CLI without remembering commands.
 
 ![Spicetify Manager](docs/screenshot.png)
 
 ## Features
 
-- **Apply Theme** — runs `spicetify apply` against your existing backup.
-- **Rebuild Backup** — runs `spicetify backup apply` on a fresh install, or `spicetify restore backup apply` (with a confirmation prompt) when a backup already exists.
+- **Backup & Apply** — runs `spicetify backup apply` on a fresh install, or `spicetify apply` when a backup already exists (the backup step is skipped automatically).
+- **Rebuild Backup** — forces a fresh backup with `spicetify restore backup apply`; asks for confirmation first.
 - **Update Spicetify** — runs `spicetify update`.
 - Live, colour-coded command output with ANSI codes stripped; **Stop**, **Copy** and **Clear**.
 - Detects the installed version, the spicetify location, and whether a backup exists.

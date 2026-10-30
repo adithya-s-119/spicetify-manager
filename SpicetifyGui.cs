@@ -46,6 +46,7 @@ internal sealed class MainForm : Form
     private readonly Label _version = new Label();
     private Label _applyHint;
     private Label _backupHint;
+    private TableLayoutPanel _actions;
     private readonly Button _apply = new Button();
     private readonly Button _backup = new Button();
     private readonly Button _update = new Button();
@@ -141,7 +142,7 @@ internal sealed class MainForm : Form
         title.Location = new Point(0, 0);
 
         Label subtitle = new Label();
-        subtitle.Text = "Apply your theme, rebuild the backup, or update spicetify.";
+        subtitle.Text = "Back up and apply your setup, rebuild the backup, or update spicetify.";
         subtitle.Font = new Font("Segoe UI", 9.5f);
         subtitle.ForeColor = Muted;
         subtitle.AutoSize = true;
@@ -175,11 +176,11 @@ internal sealed class MainForm : Form
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 60f));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-        StylePrimary(_apply, "Apply Theme");
+        StylePrimary(_apply, "Backup && Apply");
         _apply.Dock = DockStyle.Fill;
         _apply.Margin = new Padding(0, 0, 5, 8);
 
-        StyleSecondary(_backup, "Backup && Apply");
+        StyleSecondary(_backup, "Rebuild Backup");
         _backup.Dock = DockStyle.Fill;
         _backup.Margin = new Padding(5, 0, 5, 8);
 
@@ -187,14 +188,16 @@ internal sealed class MainForm : Form
         _update.Dock = DockStyle.Fill;
         _update.Margin = new Padding(5, 0, 0, 8);
 
-        _applyHint = MakeHint("Runs  spicetify apply");
+        _applyHint = MakeHint("Creates backup, then applies");
         _applyHint.Margin = new Padding(2, 0, 5, 0);
 
-        _backupHint = MakeHint("Runs  spicetify backup apply");
+        _backupHint = MakeHint("Restore, re-backup, apply");
         _backupHint.Margin = new Padding(7, 0, 5, 0);
 
         Label updateHint = MakeHint("Runs  spicetify update");
         updateHint.Margin = new Padding(7, 0, 0, 0);
+
+        _actions = grid;
 
         grid.Controls.Add(_apply, 0, 0);
         grid.Controls.Add(_backup, 1, 0);
@@ -370,24 +373,11 @@ internal sealed class MainForm : Form
     {
         if (!HasBackup())
         {
-            DialogResult answer = MessageBox.Show(
-                this,
-                "No Spotify backup was found.\n\n" +
-                "spicetify needs a backup before it can apply a theme. Create one now?\n\n" +
-                "This runs:  spicetify backup apply",
-                "Create backup?",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question,
-                MessageBoxDefaultButton.Button1);
-
-            if (answer == DialogResult.Yes)
-            {
-                StartCommand("backup apply");
-            }
-
+            StartCommand("backup apply");
             return;
         }
 
+        AppendLine("A backup already exists  -  skipping the backup step and running spicetify apply.", LogDim);
         StartCommand("apply");
     }
 
@@ -422,14 +412,24 @@ internal sealed class MainForm : Form
     {
         bool hasBackup = HasBackup();
 
-        _backup.Text = hasBackup ? "Rebuild Backup" : "Backup && Apply";
-        _backupHint.Text = hasBackup
-            ? "Backup found  -  click to rebuild"
-            : "Runs  spicetify backup apply";
+        // With no backup yet, "Rebuild Backup" is meaningless; let "Backup & Apply" span its column.
+        _backup.Visible = hasBackup;
+        _backupHint.Visible = hasBackup;
 
-        _applyHint.Text = hasBackup ? "Runs  spicetify apply" : "Needs a backup first";
-        _applyHint.ForeColor = hasBackup ? Muted : Color.FromArgb(176, 122, 28);
-        _backupHint.ForeColor = hasBackup ? Color.FromArgb(176, 122, 28) : Muted;
+        if (_actions != null)
+        {
+            int span = hasBackup ? 1 : 2;
+            _actions.SetColumnSpan(_apply, span);
+            _actions.SetColumnSpan(_applyHint, span);
+        }
+
+        _applyHint.Text = hasBackup
+            ? "Backup found  -  runs spicetify apply"
+            : "Creates backup, then applies";
+        _backupHint.Text = "Restore, re-backup, apply";
+
+        _applyHint.ForeColor = Muted;
+        _backupHint.ForeColor = Muted;
     }
 
     private static bool HasBackup()
