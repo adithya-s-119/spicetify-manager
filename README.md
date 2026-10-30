@@ -1,5 +1,7 @@
 # Spicetify Manager
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 A small Windows GUI for [spicetify](https://spicetify.app) — apply your theme, rebuild the backup, and update the CLI without remembering commands.
 
 ![Spicetify Manager](docs/screenshot.png)
@@ -21,7 +23,7 @@ A small Windows GUI for [spicetify](https://spicetify.app) — apply your theme,
 
 ## Download and run
 
-1. Download `SpicetifyGui.exe` from this repository.
+1. Download `SpicetifyGui.exe` from the [latest release](https://github.com/adithya-s-119/spicetify-manager/releases/latest) (it is also committed in this repository).
 2. Double-click it.
 
 The executable is standalone — you can move it anywhere and delete every other file. You can also pass spicetify arguments to run them on launch:
@@ -85,6 +87,12 @@ $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 | `SpicetifyApply.exe` | Console launcher (prebuilt). |
 | `SpicetifyApply.cs` | Console launcher source. |
 | `build.ps1` | Rebuilds both executables. |
+| `docs/screenshot.png` | Screenshot used in this README. |
+| `LICENSE` | MIT license. |
+
+## License
+
+[MIT](LICENSE) © 2026 Adithya S
 
 ## Disclaimer
 
