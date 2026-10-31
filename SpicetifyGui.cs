@@ -20,6 +20,8 @@ internal static class Program
 
 internal sealed class MainForm : Form
 {
+    private const string InstallerUrl = "https://raw.githubusercontent.com/spicetify/cli/main/install.ps1";
+
     private static readonly Color Canvas = Color.FromArgb(245, 246, 248);
     private static readonly Color Ink = Color.FromArgb(24, 26, 30);
     private static readonly Color Muted = Color.FromArgb(110, 116, 126);
@@ -50,12 +52,14 @@ internal sealed class MainForm : Form
     private readonly Button _apply = new Button();
     private readonly Button _backup = new Button();
     private readonly Button _update = new Button();
+    private readonly Button _install = new Button();
     private readonly Button _stop = new Button();
     private readonly Timer _clock = new Timer();
 
     private Process _current;
     private bool _running;
     private bool _missing;
+    private bool _installing;
     private bool _stoppedByUser;
     private DateTime _startedAt;
     private string _currentName = string.Empty;
@@ -72,6 +76,7 @@ internal sealed class MainForm : Form
         _apply.Click += delegate { OnApplyClicked(); };
         _backup.Click += delegate { OnBackupClicked(); };
         _update.Click += delegate { StartCommand("update"); };
+        _install.Click += delegate { OnInstallClicked(); };
         _stop.Click += delegate { StopCommand(); };
 
         Load += delegate { DetectEnvironment(); };
@@ -148,15 +153,28 @@ internal sealed class MainForm : Form
         subtitle.AutoSize = true;
         subtitle.Location = new Point(2, 42);
 
+        Panel right = new Panel();
+        right.Dock = DockStyle.Right;
+        right.Width = 300;
+        right.BackColor = Canvas;
+
         _version.Text = "checking spicetify...";
         _version.Font = new Font("Segoe UI", 9f);
         _version.ForeColor = Muted;
         _version.TextAlign = ContentAlignment.MiddleRight;
         _version.AutoSize = false;
-        _version.Dock = DockStyle.Right;
-        _version.Width = 280;
+        _version.Dock = DockStyle.Fill;
 
-        header.Controls.Add(_version);
+        StylePrimary(_install, "Install Spicetify");
+        _install.Font = new Font("Segoe UI Semibold", 9.5f);
+        _install.Size = new Size(150, 34);
+        _install.Location = new Point(150, 25);
+        _install.Visible = false;
+
+        right.Controls.Add(_version);
+        right.Controls.Add(_install);
+
+        header.Controls.Add(right);
         header.Controls.Add(title);
         header.Controls.Add(subtitle);
         return header;
@@ -459,6 +477,109 @@ internal sealed class MainForm : Form
         return false;
     }
 
+    private void OnInstallClicked()
+    {
+        if (_running)
+        {
+            return;
+        }
+
+        DialogResult answer = MessageBox.Show(
+            this,
+            "Install spicetify now?\n\n" +
+            "The official installer opens in its own window and downloads the latest spicetify CLI from GitHub:\n\n" +
+            "    " + InstallerUrl + "\n\n" +
+            "It installs to %LOCALAPPDATA%\\spicetify and may ask whether you want the Marketplace too. " +
+            "Follow its prompts - this window will detect spicetify as soon as it closes.",
+            "Install spicetify?",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question,
+            MessageBoxDefaultButton.Button1);
+
+        if (answer != DialogResult.Yes)
+        {
+            return;
+        }
+
+        string powerShell = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            "WindowsPowerShell",
+            "v1.0",
+            "powershell.exe");
+        if (!File.Exists(powerShell))
+        {
+            powerShell = "powershell.exe";
+        }
+
+        string command = "$ProgressPreference='SilentlyContinue'; iwr -useb '" + InstallerUrl + "' | iex";
+
+        _installing = true;
+        _running = true;
+        _stoppedByUser = false;
+        _startedAt = DateTime.Now;
+        _currentName = "spicetify installer";
+
+        SetBusy(true);
+        _stop.Visible = false; // never offer to kill the installer halfway through
+        _install.Visible = false;
+        _clock.Start();
+        UpdateElapsedStatus();
+
+        AppendLine(string.Empty, LogText);
+        AppendLine("> official spicetify installer", LogCyan);
+        AppendLine("A separate installer window is open - follow its prompts.", LogDim);
+        AppendLine("This app will check for spicetify as soon as the installer closes.", LogDim);
+
+        try
+        {
+            ProcessStartInfo startInfo = new ProcessStartInfo(
+                powerShell,
+                "-NoProfile -ExecutionPolicy Bypass -Command \"" + command + "\"");
+            startInfo.UseShellExecute = true;
+            startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            Process process = Process.Start(startInfo);
+            if (process == null)
+            {
+                throw new InvalidOperationException("The installer process could not be started.");
+            }
+
+            _current = process;
+
+            Task.Factory.StartNew(delegate
+            {
+                process.WaitForExit();
+
+                int exitCode;
+                try
+                {
+                    exitCode = process.ExitCode;
+                }
+                catch
+                {
+                    exitCode = -1;
+                }
+
+                try
+                {
+                    process.Dispose();
+                }
+                catch
+                {
+                    // Nothing useful to do if disposal fails.
+                }
+
+                RunOnUi(delegate { Finish(exitCode); });
+            });
+        }
+        catch (Exception ex)
+        {
+            AppendLine("Could not start the installer: " + ex.Message, LogRed);
+            _installing = false;
+            Finish(-1);
+        }
+    }
+
     private void StartCommand(string arguments)
     {
         if (_running || _missing)
@@ -558,6 +679,27 @@ internal sealed class MainForm : Form
         SetBusy(false);
 
         string elapsed = ElapsedText(DateTime.Now - _startedAt);
+
+        if (_installing)
+        {
+            // The official installer is interactive, so its exit code is not a
+            // reliable success signal. Just look for spicetify again.
+            _installing = false;
+            _stop.Visible = false;
+
+            AppendLine(string.Empty, LogText);
+            AppendLine("Installer closed after " + elapsed + ".", LogDim);
+
+            DetectEnvironment();
+
+            if (!_missing)
+            {
+                _status.Text = "spicetify is installed. Choose an action above.";
+                _status.ForeColor = Color.FromArgb(18, 140, 66);
+            }
+
+            return;
+        }
 
         if (exitCode == 0)
         {
@@ -748,9 +890,20 @@ internal sealed class MainForm : Form
             return;
         }
 
+        if (_missing)
+        {
+            AppendLine(string.Empty, LogText);
+            AppendLine("spicetify is now installed.", LogGreen);
+        }
+
+        _missing = false;
+        _install.Visible = false;
+        _version.Visible = true;
+
         AppendLine("spicetify found: " + executable, LogDim);
         AppendLine(string.Empty, LogText);
 
+        SetBusy(false);
         UpdateBackupHints();
         RefreshVersionLabel(executable);
     }
@@ -804,9 +957,10 @@ internal sealed class MainForm : Form
     private void ShowMissingSpicetify()
     {
         _missing = true;
-        _version.Text = "spicetify not found";
-        _version.ForeColor = LogRed;
-        _status.Text = "spicetify.exe was not found. Install it from spicetify.app";
+        _version.Visible = false;   // replaced by the Install button
+        _install.Visible = true;
+
+        _status.Text = "spicetify is not installed. Use Install Spicetify to set it up.";
         _status.ForeColor = LogRed;
 
         _apply.Enabled = false;
@@ -818,7 +972,7 @@ internal sealed class MainForm : Form
 
         AppendLine("spicetify.exe was not found.", LogRed);
         AppendLine("Looked in your PATH, %LOCALAPPDATA%\\spicetify and %APPDATA%\\spicetify.", LogDim);
-        AppendLine("Install it from https://spicetify.app and restart this app.", LogDim);
+        AppendLine("Click Install Spicetify to run the official installer, or get it from https://spicetify.app.", LogDim);
     }
 
     private static string FindSpicetify()
@@ -897,6 +1051,26 @@ internal sealed class MainForm : Form
     {
         if (!_running)
         {
+            return;
+        }
+
+        if (_installing)
+        {
+            DialogResult installAnswer = MessageBox.Show(
+                this,
+                "The spicetify installer is still running in its own window.\n\n" +
+                "Close this window and leave the installer running?",
+                "Spicetify Control",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question,
+                MessageBoxDefaultButton.Button2);
+
+            if (installAnswer != DialogResult.Yes)
+            {
+                e.Cancel = true;
+            }
+
+            // Never kill the installer halfway through.
             return;
         }
 
