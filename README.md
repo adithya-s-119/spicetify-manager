@@ -2,15 +2,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A small Windows GUI for [spicetify](https://spicetify.app) — install spicetify, back up and apply your setup, rebuild the backup, and update the CLI without remembering commands.
+A small Windows GUI for [spicetify](https://spicetify.app) — install spicetify, back up and apply your setup, and update the CLI without remembering commands.
 
 ![Spicetify Manager](docs/screenshot.png)
 
 ## Features
 
 - **Install Spicetify** — if spicetify isn't found, the GUI offers to run the official installer (`install.ps1`) for you, then picks it up automatically.
-- **Backup & Apply** — runs `spicetify backup apply` on a fresh install, or `spicetify apply` when a backup already exists (the backup step is skipped automatically).
-- **Rebuild Backup** — forces a fresh backup with `spicetify restore backup apply`; asks for confirmation first.
+- **Backup & Apply** — runs `spicetify backup apply` when there is no backup yet, and `spicetify apply` when one already exists (so it never fails on an existing backup).
 - **Update Spicetify** — runs `spicetify update`.
 - Live, colour-coded command output with ANSI codes stripped; **Stop**, **Copy** and **Clear**.
 - Detects the installed version, the spicetify location, and whether a backup exists.
@@ -44,15 +43,18 @@ iwr -useb https://raw.githubusercontent.com/spicetify/cli/main/install.ps1 | iex
 
 That installer is interactive (it asks about the Marketplace and can repair an existing install), so it opens in its own console window — answer its prompts there. When it closes, the GUI re-checks for spicetify and enables the action buttons automatically. It installs to `%LOCALAPPDATA%\spicetify` and adds that folder to your user `PATH`.
 
-## Why "Rebuild Backup" instead of "Backup"?
+## How "Backup & Apply" decides
 
-`spicetify backup` creates exactly one backup and refuses to overwrite it. Once a backup exists, theme changes only need `spicetify apply`. To start over you must restore Spotify's original files first:
+`spicetify backup` creates exactly one backup and refuses to overwrite it, so the button checks first:
 
-```
-spicetify restore backup apply
-```
+| State | What it runs |
+| --- | --- |
+| No backup found in `%APPDATA%\spicetify\Backup` | `spicetify backup apply` |
+| A backup already exists | `spicetify apply` |
 
-That restores the stock files, captures a fresh backup, and re-applies your setup. The GUI asks for confirmation before running it.
+That means the same button works on a fresh install and on an already-patched Spotify, without ever hitting the "backup already exists" error.
+
+To deliberately start over, run `spicetify restore backup apply` in a terminal: it restores Spotify's stock files, captures a fresh backup, then re-applies your setup.
 
 ## Console launcher
 

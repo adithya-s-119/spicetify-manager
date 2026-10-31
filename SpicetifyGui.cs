@@ -47,10 +47,7 @@ internal sealed class MainForm : Form
     private readonly Label _status = new Label();
     private readonly Label _version = new Label();
     private Label _applyHint;
-    private Label _backupHint;
-    private TableLayoutPanel _actions;
     private readonly Button _apply = new Button();
-    private readonly Button _backup = new Button();
     private readonly Button _update = new Button();
     private readonly Button _install = new Button();
     private readonly Button _stop = new Button();
@@ -74,7 +71,6 @@ internal sealed class MainForm : Form
         _clock.Tick += delegate { UpdateElapsedStatus(); };
 
         _apply.Click += delegate { OnApplyClicked(); };
-        _backup.Click += delegate { OnBackupClicked(); };
         _update.Click += delegate { StartCommand("update"); };
         _install.Click += delegate { OnInstallClicked(); };
         _stop.Click += delegate { StopCommand(); };
@@ -147,7 +143,7 @@ internal sealed class MainForm : Form
         title.Location = new Point(0, 0);
 
         Label subtitle = new Label();
-        subtitle.Text = "Back up and apply your setup, rebuild the backup, or update spicetify.";
+        subtitle.Text = "Back up and apply your setup, or update spicetify.";
         subtitle.Font = new Font("Segoe UI", 9.5f);
         subtitle.ForeColor = Muted;
         subtitle.AutoSize = true;
@@ -186,21 +182,16 @@ internal sealed class MainForm : Form
         grid.Dock = DockStyle.Fill;
         grid.Margin = new Padding(0);
         grid.BackColor = Canvas;
-        grid.ColumnCount = 3;
+        grid.ColumnCount = 2;
         grid.RowCount = 2;
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.333f));
-        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.334f));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
+        grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50f));
         grid.RowStyles.Add(new RowStyle(SizeType.Absolute, 60f));
         grid.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
         StylePrimary(_apply, "Backup && Apply");
         _apply.Dock = DockStyle.Fill;
         _apply.Margin = new Padding(0, 0, 5, 8);
-
-        StyleSecondary(_backup, "Rebuild Backup");
-        _backup.Dock = DockStyle.Fill;
-        _backup.Margin = new Padding(5, 0, 5, 8);
 
         StyleSecondary(_update, "Update Spicetify");
         _update.Dock = DockStyle.Fill;
@@ -209,20 +200,13 @@ internal sealed class MainForm : Form
         _applyHint = MakeHint("Creates backup, then applies");
         _applyHint.Margin = new Padding(2, 0, 5, 0);
 
-        _backupHint = MakeHint("Restore, re-backup, apply");
-        _backupHint.Margin = new Padding(7, 0, 5, 0);
-
         Label updateHint = MakeHint("Runs  spicetify update");
         updateHint.Margin = new Padding(7, 0, 0, 0);
 
-        _actions = grid;
-
         grid.Controls.Add(_apply, 0, 0);
-        grid.Controls.Add(_backup, 1, 0);
-        grid.Controls.Add(_update, 2, 0);
+        grid.Controls.Add(_update, 1, 0);
         grid.Controls.Add(_applyHint, 0, 1);
-        grid.Controls.Add(_backupHint, 1, 1);
-        grid.Controls.Add(updateHint, 2, 1);
+        grid.Controls.Add(updateHint, 1, 1);
         return grid;
     }
 
@@ -399,55 +383,14 @@ internal sealed class MainForm : Form
         StartCommand("apply");
     }
 
-    private void OnBackupClicked()
-    {
-        if (!HasBackup())
-        {
-            StartCommand("backup apply");
-            return;
-        }
-
-        // A backup already exists, and spicetify refuses to overwrite it.
-        DialogResult answer = MessageBox.Show(
-            this,
-            "A backup already exists, so spicetify cannot create a new one directly.\n\n" +
-            "To rebuild it, spicetify first restores Spotify's original files:\n\n" +
-            "    spicetify restore backup apply\n\n" +
-            "Spotify will briefly return to stock, be backed up again, then re-patched.\n\n" +
-            "Continue?",
-            "Rebuild backup?",
-            MessageBoxButtons.YesNo,
-            MessageBoxIcon.Warning,
-            MessageBoxDefaultButton.Button2);
-
-        if (answer == DialogResult.Yes)
-        {
-            StartCommand("restore backup apply");
-        }
-    }
-
     private void UpdateBackupHints()
     {
         bool hasBackup = HasBackup();
 
-        // With no backup yet, "Rebuild Backup" is meaningless; let "Backup & Apply" span its column.
-        _backup.Visible = hasBackup;
-        _backupHint.Visible = hasBackup;
-
-        if (_actions != null)
-        {
-            int span = hasBackup ? 1 : 2;
-            _actions.SetColumnSpan(_apply, span);
-            _actions.SetColumnSpan(_applyHint, span);
-        }
-
         _applyHint.Text = hasBackup
             ? "Backup found  -  runs spicetify apply"
             : "Creates backup, then applies";
-        _backupHint.Text = "Restore, re-backup, apply";
-
         _applyHint.ForeColor = Muted;
-        _backupHint.ForeColor = Muted;
     }
 
     private static bool HasBackup()
@@ -772,16 +715,13 @@ internal sealed class MainForm : Form
     private void SetBusy(bool busy)
     {
         _apply.Enabled = !busy;
-        _backup.Enabled = !busy;
         _update.Enabled = !busy;
         _stop.Enabled = busy;
         _stop.Visible = busy;
 
         _apply.BackColor = busy ? Color.FromArgb(151, 199, 169) : Green;
-        _backup.BackColor = busy ? Color.FromArgb(186, 189, 194) : Slate;
         _update.BackColor = busy ? Color.FromArgb(186, 189, 194) : Slate;
         _apply.ForeColor = busy ? Color.FromArgb(238, 244, 240) : Color.White;
-        _backup.ForeColor = busy ? Color.FromArgb(246, 247, 248) : Color.White;
         _update.ForeColor = busy ? Color.FromArgb(246, 247, 248) : Color.White;
         Cursor = busy ? Cursors.AppStarting : Cursors.Default;
     }
@@ -964,10 +904,8 @@ internal sealed class MainForm : Form
         _status.ForeColor = LogRed;
 
         _apply.Enabled = false;
-        _backup.Enabled = false;
         _update.Enabled = false;
         _apply.BackColor = Color.FromArgb(151, 199, 169);
-        _backup.BackColor = Color.FromArgb(186, 189, 194);
         _update.BackColor = Color.FromArgb(186, 189, 194);
 
         AppendLine("spicetify.exe was not found.", LogRed);
