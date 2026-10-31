@@ -91,17 +91,14 @@ $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
   /out:SpicetifyApply.exe SpicetifyApply.cs
 ```
 
-## Code signing
+## Unsigned build
 
-The current release is unsigned, so Windows SmartScreen shows *"Unknown publisher"* the first time you run it — choose **More info → Run anyway**, or build it yourself from the sources above.
+The executable is unsigned, so Windows SmartScreen shows *"Unknown publisher"* the first time you run it — choose **More info → Run anyway**.
 
-The project is applying for free code signing through the [SignPath Foundation](https://signpath.org), which signs open-source Windows builds at no cost. Once approved, releases will be signed and can be verified with:
+If you'd rather not run an unsigned binary, you have two options:
 
-```powershell
-signtool verify /pa /v SpicetifyGui.exe
-```
-
-Until then you can always check that a download matches the source: every release is built by the [`build` workflow](.github/workflows/build.yml) on GitHub, and the same `build.ps1` is in this repository. See [SIGNING.md](SIGNING.md) for the full signing policy.
+- Check the [build log](https://github.com/adithya-s-119/spicetify-manager/actions/workflows/build.yml) — GitHub Actions compiles this repository on every push, so you can confirm the sources build cleanly.
+- Build it yourself with `build.ps1` (see above); it takes a few seconds and needs nothing beyond Windows.
 
 ## Repository layout
 
@@ -113,8 +110,7 @@ Until then you can always check that a download matches the source: every releas
 | `SpicetifyApply.exe` | Console launcher (prebuilt). |
 | `SpicetifyApply.cs` | Console launcher source. |
 | `build.ps1` | Rebuilds both executables. |
-| `.github/workflows/build.yml` | CI build (and the SignPath signing step, once enabled). |
-| `SIGNING.md` | Code signing policy. |
+| `.github/workflows/build.yml` | CI build used to verify the sources compile. |
 | `docs/screenshot.png` | Screenshot used in this README. |
 | `LICENSE` | MIT license. |
 
