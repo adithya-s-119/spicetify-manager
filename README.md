@@ -1,6 +1,7 @@
 # Spicetify Manager
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![build](https://github.com/adithya-s-119/spicetify-manager/actions/workflows/build.yml/badge.svg)](https://github.com/adithya-s-119/spicetify-manager/actions/workflows/build.yml)
 
 A small Windows GUI for [spicetify](https://spicetify.app) — install spicetify, back up and apply your setup, and update the CLI without remembering commands.
 
