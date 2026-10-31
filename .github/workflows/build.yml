@@ -1,4 +1,4 @@
-name: build
+﻿name: build
 
 on:
   push:
@@ -19,7 +19,7 @@ jobs:
     runs-on: windows-latest
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Build
         shell: pwsh
@@ -38,7 +38,7 @@ jobs:
 
       - name: Upload unsigned binaries
         id: upload-unsigned-artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spicetify-manager-unsigned
           path: |
@@ -74,8 +74,9 @@ jobs:
 
       - name: Upload signed binaries
         if: env.SIGNPATH_API_TOKEN != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: spicetify-manager-signed
           path: signed/**/*.exe
           if-no-files-found: error
+
