@@ -1,0 +1,81 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+
+env:
+  SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Build
+        shell: pwsh
+        run: powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1
+
+      - name: Check the binaries
+        shell: pwsh
+        run: |
+          foreach ($name in 'SpicetifyGui.exe', 'SpicetifyApply.exe') {
+            $item = Get-Item $name
+            $bytes = [System.IO.File]::ReadAllBytes($item.FullName)
+            if ($bytes.Length -lt 10000) { throw "$name is too small" }
+            if ($bytes[0] -ne 0x4D -or $bytes[1] -ne 0x5A) { throw "$name is not a PE file" }
+            "{0}: {1} bytes" -f $name, $bytes.Length
+          }
+
+      - name: Upload unsigned binaries
+        id: upload-unsigned-artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: spicetify-manager-unsigned
+          path: |
+            SpicetifyGui.exe
+            SpicetifyApply.exe
+          if-no-files-found: error
+
+      # Inactive until the SignPath project is approved and this repository has
+      # the SIGNPATH_API_TOKEN secret and the SIGNPATH_* variables set.
+      - name: Sign with SignPath
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG }}
+          signing-policy-slug: ${{ vars.SIGNPATH_SIGNING_POLICY_SLUG }}
+          github-artifact-id: ${{ steps.upload-unsigned-artifact.outputs.artifact-id }}
+          wait-for-completion: true
+          output-artifact-directory: signed
+
+      - name: Verify the signature
+        if: env.SIGNPATH_API_TOKEN != ''
+        shell: pwsh
+        run: |
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          if (-not $signtool) { throw 'signtool.exe not found' }
+          Get-ChildItem signed -Recurse -Filter *.exe | ForEach-Object {
+            & $signtool.FullName verify /pa /v $_.FullName
+            if ($LASTEXITCODE -ne 0) { throw "Signature check failed for $($_.Name)" }
+          }
+
+      - name: Upload signed binaries
+        if: env.SIGNPATH_API_TOKEN != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: spicetify-manager-signed
+          path: signed/**/*.exe
+          if-no-files-found: error

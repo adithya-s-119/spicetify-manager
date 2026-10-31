@@ -90,6 +90,18 @@ $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
   /out:SpicetifyApply.exe SpicetifyApply.cs
 ```
 
+## Code signing
+
+The current release is unsigned, so Windows SmartScreen shows *"Unknown publisher"* the first time you run it — choose **More info → Run anyway**, or build it yourself from the sources above.
+
+The project is applying for free code signing through the [SignPath Foundation](https://signpath.org), which signs open-source Windows builds at no cost. Once approved, releases will be signed and can be verified with:
+
+```powershell
+signtool verify /pa /v SpicetifyGui.exe
+```
+
+Until then you can always check that a download matches the source: every release is built by the [`build` workflow](.github/workflows/build.yml) on GitHub, and the same `build.ps1` is in this repository. See [SIGNING.md](SIGNING.md) for the full signing policy.
+
 ## Repository layout
 
 | File | Purpose |
@@ -100,6 +112,8 @@ $csc = "$env:WINDIR\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
 | `SpicetifyApply.exe` | Console launcher (prebuilt). |
 | `SpicetifyApply.cs` | Console launcher source. |
 | `build.ps1` | Rebuilds both executables. |
+| `.github/workflows/build.yml` | CI build (and the SignPath signing step, once enabled). |
+| `SIGNING.md` | Code signing policy. |
 | `docs/screenshot.png` | Screenshot used in this README. |
 | `LICENSE` | MIT license. |
 
